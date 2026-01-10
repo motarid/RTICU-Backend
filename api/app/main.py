@@ -1,3 +1,4 @@
+from .clinical.hypoxemia import hypoxemia_reasoning_engine
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends, HTTPException, status
