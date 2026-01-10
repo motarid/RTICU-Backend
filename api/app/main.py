@@ -1,15 +1,31 @@
-from app.api.routers import hypoxemia
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.middleware.cors import CORSMiddleware
 import secrets
 
+# Routers
+from app.api.routers import health, patients
+# لاحقًا: from app.api.routers import hypoxemia
+
+# =========================
+# Security (Swagger Login)
+# =========================
 security = HTTPBasic()
 
-def swagger_auth(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, "rticu")
-    correct_password = secrets.compare_digest(credentials.password, "secure123")
+SWAGGER_USERNAME = "admin"
+SWAGGER_PASSWORD = "rticu123"
+
+
+def swagger_auth(
+    credentials: HTTPBasicCredentials = Depends(security),
+):
+    correct_username = secrets.compare_digest(
+        credentials.username, SWAGGER_USERNAME
+    )
+    correct_password = secrets.compare_digest(
+        credentials.password, SWAGGER_PASSWORD
+    )
 
     if not (correct_username and correct_password):
         raise HTTPException(
@@ -18,47 +34,46 @@ def swagger_auth(credentials: HTTPBasicCredentials = Depends(security)):
             headers={"WWW-Authenticate": "Basic"},
         )
 
+    return True
+
+
+# =========================
+# FastAPI App
+# =========================
 app = FastAPI(
     title="RTICU Clinical API",
-    description="RTICU secure clinical API",
+    description="Secure ICU Clinical Decision Support API",
     version="1.0.0",
-    docs_url=None,
-    redoc_url=None
+    docs_url=None,   # ❌ disable default docs
+    redoc_url=None   # ❌ disable default redoc
 )
 
 # =========================
-# Register API Routers
+# CORS (optional but safe)
 # =========================
-
-app.include_router(
-    health.router,
-    tags=["Health"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-app.include_router(
-    patients.router,
-    tags=["Patients"]
-)
+# =========================
+# Routers Registration ✅
+# =========================
+app.include_router(health.router, tags=["Health"])
+app.include_router(patients.router, tags=["Patients"])
+# لاحقًا:
+# app.include_router(hypoxemia.router, prefix="/clinical", tags=["Hypoxemia & ARDS"])
 
 
-    Clinical decision support APIs for:
-    - ICU respiratory workflows
-    - Ventilator logic
-    - ABG interpretation
-    - AI-driven respiratory tools
-
-    Maintained by RTICU Team.
-    """,
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
-from fastapi.openapi.docs import get_swagger_ui_html
-
+# =========================
+# Protected Swagger Docs 🔐
+# =========================
 @app.get("/docs", include_in_schema=False)
-def custom_swagger_ui(credentials: HTTPBasicCredentials = Depends(swagger_auth)):
+def secure_docs(auth: bool = Depends(swagger_auth)):
     return get_swagger_ui_html(
         openapi_url="/openapi.json",
-        title="RTICU Secure Docs"
+        title="RTICU Secure API Docs",
     )
-    
