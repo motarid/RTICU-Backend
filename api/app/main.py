@@ -26,6 +26,20 @@ app = FastAPI(
     redoc_url=None
 )
 
+# =========================
+# Register API Routers
+# =========================
+
+app.include_router(
+    health.router,
+    tags=["Health"]
+)
+
+app.include_router(
+    patients.router,
+    tags=["Patients"]
+)
+
 
     Clinical decision support APIs for:
     - ICU respiratory workflows
