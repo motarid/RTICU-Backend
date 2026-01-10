@@ -1,4 +1,3 @@
-from .clinical.hypoxemia import hypoxemia_reasoning_engine
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends, HTTPException, status
@@ -47,17 +46,4 @@ def custom_swagger_ui(credentials: HTTPBasicCredentials = Depends(swagger_auth))
         openapi_url="/openapi.json",
         title="RTICU Secure Docs"
     )
-@app.post("/clinical/hypoxemia")
-def hypoxemia_engine(
-    pa_o2: float,
-    fio2: float,
-    peep: float
-):
-    """
-    Hypoxemia & ARDS reasoning endpoint
-    """
-    return hypoxemia_reasoning_engine(
-        pa_o2=pa_o2,
-        fio2=fio2,
-        peep=peep
-    )
+    
