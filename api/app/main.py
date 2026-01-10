@@ -1,25 +1,18 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import secrets
 
-# Routers
-from app.api.routers import health, patients
-# لاحقًا: from app.api.routers import hypoxemia
-
-# =========================
-# Security (Swagger Login)
-# =========================
+# ===============================
+# Security (Swagger Auth)
+# ===============================
 security = HTTPBasic()
 
 SWAGGER_USERNAME = "admin"
 SWAGGER_PASSWORD = "rticu123"
 
-
-def swagger_auth(
-    credentials: HTTPBasicCredentials = Depends(security),
-):
+def swagger_auth(credentials: HTTPBasicCredentials = Depends(security)):
     correct_username = secrets.compare_digest(
         credentials.username, SWAGGER_USERNAME
     )
@@ -33,47 +26,61 @@ def swagger_auth(
             detail="Unauthorized",
             headers={"WWW-Authenticate": "Basic"},
         )
-
     return True
 
 
-# =========================
-# FastAPI App
-# =========================
+# ===============================
+# FastAPI App (Swagger Disabled)
+# ===============================
 app = FastAPI(
     title="RTICU Clinical API",
-    description="Secure ICU Clinical Decision Support API",
     version="1.0.0",
-    docs_url=None,   # ❌ disable default docs
-    redoc_url=None   # ❌ disable default redoc
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
 )
 
-# =========================
-# CORS (optional but safe)
-# =========================
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+
+# ===============================
+# Routers Import
+# ===============================
+from app.api.routers import health, patients, hypoxemia
+
+
+# ===============================
+# Routers Registration
+# ===============================
+app.include_router(
+    health.router,
+    tags=["Health"]
 )
 
-# =========================
-# Routers Registration ✅
-# =========================
-app.include_router(health.router, tags=["Health"])
-app.include_router(patients.router, tags=["Patients"])
-# لاحقًا:
-# app.include_router(hypoxemia.router, prefix="/clinical", tags=["Hypoxemia & ARDS"])
+app.include_router(
+    patients.router,
+    tags=["Patients"]
+)
+
+app.include_router(
+    hypoxemia.router,
+    prefix="/clinical",
+    tags=["Hypoxemia & ARDS"]
+)
 
 
-# =========================
-# Protected Swagger Docs 🔐
-# =========================
+# ===============================
+# Secure OpenAPI JSON
+# ===============================
+@app.get("/openapi.json", include_in_schema=False)
+def openapi_json(auth: bool = Depends(swagger_auth)):
+    return JSONResponse(app.openapi())
+
+
+# ===============================
+# Secure Swagger UI
+# ===============================
 @app.get("/docs", include_in_schema=False)
-def secure_docs(auth: bool = Depends(swagger_auth)):
+def secure_swagger(auth: bool = Depends(swagger_auth)):
     return get_swagger_ui_html(
         openapi_url="/openapi.json",
-        title="RTICU Secure API Docs",
+        title="RTICU Secure API Docs"
     )
