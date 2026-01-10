@@ -3,7 +3,8 @@ from fastapi import APIRouter
 router = APIRouter()
 
 @router.get("/hypoxemia")
-def hypoxemia_check():
+def hypoxemia_engine():
     return {
-        "status": "Hypoxemia engine active"
+        "engine": "Hypoxemia & ARDS Reasoning",
+        "status": "active"
     }
