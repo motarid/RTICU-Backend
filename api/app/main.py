@@ -3,11 +3,8 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.openapi.docs import get_swagger_ui_html
 import secrets
 
-# Routers
-from app.routers import patients, hypoxemia
-
 # =========================
-# Security (Swagger Only)
+# Security
 # =========================
 security = HTTPBasic()
 
@@ -29,6 +26,7 @@ def swagger_auth(credentials: HTTPBasicCredentials = Depends(security)):
             detail="Unauthorized",
             headers={"WWW-Authenticate": "Basic"},
         )
+
     return True
 
 
@@ -37,17 +35,17 @@ def swagger_auth(credentials: HTTPBasicCredentials = Depends(security)):
 # =========================
 app = FastAPI(
     title="RTICU Clinical API",
-    description="Secure ICU Clinical Decision Support API",
     version="1.0.0",
-    docs_url=None,      # Disable default docs
+    docs_url=None,     # ⛔ تعطيل Swagger الافتراضي
     redoc_url=None
 )
 
+
 # =========================
-# Secure Swagger
+# Secure Swagger Endpoint
 # =========================
 @app.get("/docs", include_in_schema=False)
-def secure_docs(auth: bool = Depends(swagger_auth)):
+def secure_docs(_: bool = Depends(swagger_auth)):
     return get_swagger_ui_html(
         openapi_url="/openapi.json",
         title="RTICU Secure API Docs"
@@ -55,34 +53,13 @@ def secure_docs(auth: bool = Depends(swagger_auth)):
 
 
 # =========================
-# Base Endpoints
+# Basic Test Endpoints
 # =========================
 @app.get("/")
 def root():
-    return {"status": "RTICU API is running"}
+    return {"status": "RTICU API running"}
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
-@app.get("/version")
-def version():
-    return {"version": "1.0.0"}
-
-
-# =========================
-# Routers Registration ✅
-# =========================
-app.include_router(
-    patients.router,
-    prefix="/patients",
-    tags=["Patients"]
-)
-
-app.include_router(
-    hypoxemia.router,
-    prefix="/clinical",
-    tags=["Hypoxemia & ARDS"]
-)
